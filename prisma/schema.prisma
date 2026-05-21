@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TOURIST
+  MERCHANT
+  ADMIN
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RedeemMode {
+  SCREEN
+  BARCODE
+  QR_REVERSE
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+  GIFT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(TOURIST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  merchant        Merchant?
+  couponDownloads CouponDownload[]
+}
+
+model Merchant {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id])
+  nameKo         String
+  nameEn         String?
+  categoryId     String?
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  addressKo      String
+  addressEn      String?
+  lat            Float
+  lng            Float
+  phone          String?
+  websiteUrl     String?
+  thumbnailUrl   String?
+  description    String?
+  naverPlaceId   String?
+  approvalStatus ApprovalStatus @default(PENDING)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  coupons    Coupon[]
+  dailyStats DailyStat[]
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  nameKo    String
+  nameEn    String
+  icon      String?
+  merchants Merchant[]
+  coupons   Coupon[]
+}
+
+model Coupon {
+  id            String         @id @default(cuid())
+  merchantId    String
+  merchant      Merchant       @relation(fields: [merchantId], references: [id])
+  categoryId    String?
+  category      Category?      @relation(fields: [categoryId], references: [id])
+  titleKo       String
+  titleEn       String?
+  titleJa       String?
+  titleZh       String?
+  descKo        String?
+  descEn        String?
+  couponType    CouponType     @default(PERCENT)
+  discountValue Int            @default(10)
+  redeemMode    RedeemMode     @default(SCREEN)
+  barcodeValue  String?
+  qrPayload     String?
+  thumbnailUrl  String?
+  startsAt      DateTime       @default(now())
+  endsAt        DateTime
+  maxDownloads  Int?
+  approvalStatus ApprovalStatus @default(PENDING)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  downloads CouponDownload[]
+}
+
+model CouponDownload {
+  id         String      @id @default(cuid())
+  couponId   String
+  coupon     Coupon      @relation(fields: [couponId], references: [id])
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  sessionId  String?
+  redeemedAt DateTime?
+  redeemMode RedeemMode?
+  createdAt  DateTime    @default(now())
+}
+
+model DailyStat {
+  id         String   @id @default(cuid())
+  date       DateTime
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  downloads  Int      @default(0)
+  redeems    Int      @default(0)
+
+  @@unique([date, merchantId])
+}
